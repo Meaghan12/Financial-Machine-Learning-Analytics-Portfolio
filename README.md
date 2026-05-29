@@ -1,7 +1,8 @@
-# Financial-Machine-Learning-Analytics-Portfolio
-Financial analytics and machine-learning portfolio prepared for Turing's Remote Financial Consultant role, featuring forecasting, valuation logic, model evaluation, optimization, and applied business analytics
-# Financial Machine-Learning Analytics Portfolio  
-### Prepared for Turing Remote Financial Consultant Application
+# Financial Machine-Learning Analytics Portfolio
+
+Financial analytics and machine-learning portfolio prepared for Turing's Remote Financial Consultant application, featuring forecasting, valuation logic, model evaluation, optimization, quantitative reasoning, and applied business analytics.
+
+## Prepared for Turing Remote Financial Consultant Application
 
 This repository presents selected financial analytics, machine-learning, forecasting, optimization, and applied business analytics work relevant to Turing’s Remote Financial Consultant role.
 
@@ -9,63 +10,83 @@ The portfolio is designed to show how I structure quantitative problems, evaluat
 
 ## Professional Focus
 
-I am completing a Master of Business Analytics (MBAN) at Saint Mary’s University with applied experience in machine learning, financial modelling, optimization, operational analytics, and health-data performance analysis. My project work connects analytics to financial consulting, valuation logic, portfolio strategy, entertainment economics, streaming/content economics, and AI model-evaluation workflows.
+I am completing a Master of Business Analytics (MBAN) at Saint Mary’s University with applied experience in machine learning, financial modelling, optimization, operational analytics, and health-data performance analysis.
+
+My project work connects analytics to financial consulting, valuation logic, portfolio strategy, entertainment economics, streaming/content economics, and AI model-evaluation workflows.
 
 ## Relevance to Turing
 
 Turing’s role involves evaluating and improving AI models on financial consulting topics. This portfolio is relevant because it demonstrates work connected to:
 
 - Financial analytics and business decision-making
-- Machine learning and predictive modelling
+- Machine-learning model evaluation
 - Forecasting and time-series analysis
-- Model interpretation and evaluation
-- Valuation logic and strategic finance reasoning
-- Optimization and simulation
-- Clear written communication for technical and non-technical stakeholders
+- Risk, return, and portfolio logic
+- Valuation and investment reasoning
+- Optimization and scenario modelling
+- Translating technical outputs into clear business interpretation
 
-## Core Technical Skills Demonstrated
+## Featured Project: Alpha Quant Engine
 
-- Python: pandas, numpy, Scikit-learn, statsmodels, matplotlib
-- Machine learning: regression, classification, clustering, model validation
-- Forecasting: ARIMA and time-series analysis
-- Simulation: Monte Carlo simulation and decision-based modelling
-- Optimization: prescriptive analytics and operational modelling
-- Financial analytics: valuation logic, portfolio reasoning, risk framing, and strategic recommendations
-- Reporting: structured analysis, stakeholder-facing summaries, dashboards, and business interpretation
+**Live demo:** https://alpha-quant-engine.vercel.app  
+**GitHub repository:** https://github.com/Meaghan12/alpha-quant-engine
 
-## Selected Project Areas
+Alpha Quant Engine is an interactive finance simulation that demonstrates quantitative trading logic, valuation thinking, portfolio strategy, and explainable financial decision-making. It includes scenarios connected to luxury brand DCF valuation, Netflix/content economics, and WBD merger arbitrage.
 
-### 1. Financial Analytics and Forecasting
+Relevant methods and concepts include:
 
-Projects in this area demonstrate applied financial modelling, forecasting, time-series analysis, and business interpretation. The focus is not only on producing model outputs, but on explaining what those outputs mean for decision-making.
+- Monte Carlo VaR
+- Black-Scholes option pricing
+- Mean-variance optimization
+- DCF valuation with terminal value
+- Scenario-based capital allocation
+- Interactive decision simulation
+- AI-adjacent financial model interpretation
 
-### 2. Machine Learning and Model Evaluation
+This project is especially relevant to Turing because it shows my ability to connect financial theory, quantitative methods, interactive modelling, and plain-English explanation in one applied business-facing project.
 
-Projects in this area demonstrate predictive modelling, model validation, classification logic, feature interpretation, and performance evaluation. This aligns with AI model-evaluation work where outputs must be assessed for accuracy, reasoning quality, and practical usefulness.
+## Finance Analytics Projects
 
-### 3. Valuation, Strategy, and Portfolio Logic
+This repository includes finance-focused work demonstrating applied analysis, forecasting, and business interpretation.
 
-Projects in this area connect analytics to valuation reasoning, investment framing, portfolio optimization, and wealth-building strategy. These workflows are relevant to financial consulting tasks that require structured judgment and clear recommendations.
+Examples include:
 
-### 4. Optimization and Operational Analytics
+- Time-series forecasting and volatility analysis
+- Return distribution analysis
+- Microsoft and Apple financial analytics work
+- Financial interpretation of model outputs
+- Risk and return framing for business decisions
 
-Projects in this area demonstrate workflow analysis, KPI measurement, process improvement, and optimization. This includes applied analytics work connected to MRI Department workflow efficiency and operational performance at Nova Scotia Health.
+## Machine-Learning Projects
 
-### 5. Entertainment, Streaming, and Creator-Led Business Analytics
+This repository also includes machine-learning work demonstrating model training, model evaluation, and interpretation of predictive outputs.
 
-Projects in this area apply financial analytics and machine-learning logic to entertainment, creator-led ventures, luxury-brand valuation, content economics, and streaming strategy.
+Examples include:
 
-## Applied Health Analytics Experience
+- Classification and regression workflows
+- Hyperparameter tuning
+- Gradient descent
+- KNN classification and regression
+- Threshold optimization
+- Boosting
+- Model evaluation and performance interpretation
 
-My project affiliation work includes MRI workflow efficiency and performance analytics at Nova Scotia Health. This work involves operational health data, performance benchmarking, workflow optimization, structured reporting, and dashboard-oriented analysis for senior leadership and clinical stakeholders.
+## Technical Skills Demonstrated
 
-## Why This Portfolio Matters
+- Python
+- Machine learning
+- Forecasting
+- Financial analytics
+- Risk modelling
+- Valuation logic
+- Optimization
+- Model evaluation
+- Business analytics
+- GitHub portfolio organization
+- Technical communication for business audiences
 
-This repository shows my ability to combine financial reasoning, machine learning, technical communication, and applied analytics. For Turing’s financial-AI work, the key value is the ability to evaluate complex model outputs, identify reasoning gaps, create structured assessment logic, and explain finance-related conclusions clearly.
+## Portfolio Purpose
 
-## Contact
+This portfolio is intended to support my application for Turing’s Remote Financial Consultant role by showing that I can evaluate financial analytics work, understand quantitative and machine-learning outputs, and communicate the business meaning of technical results clearly.
 
-Meaghan A. Ryan  
-Halifax, Nova Scotia  
-Email: Meaghan.ryan@smu.ca  
-GitHub: github.com/Meaghan12
+The Alpha Quant Engine is included as a flagship project because it combines finance, AI-adjacent interpretation, decision simulation, valuation logic, and interactive analytics in a way that directly supports financial consulting and AI model-evaluation work.
