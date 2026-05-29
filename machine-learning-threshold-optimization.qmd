@@ -1,0 +1,482 @@
+---
+title: "ROC/AUC and Threshold Optimization with kNN"
+author: "Meaghan Ryan"
+Project_for: "Ryan Leslie & SuperPhone/WealthPlan Pro Team GitHub Portfolio"
+date: "May 21st, 2026"
+---
+
+```{r setup, include=FALSE}
+# Load required libraries
+library(tidyverse)
+library(caret)
+library(ROCR)
+library(pROC)
+library(knitr)
+library(kableExtra)
+
+# Set seed for reproducibility
+set.seed(42)
+```
+
+# Setup: Data Preparation
+
+Run the code below to load and preprocess the data.
+
+```{r data_preparation}
+# Load the data
+churn_raw <- read.csv("WA_Fn-UseC_-Telco-Customer-Churn1.csv")
+
+# Clean and subset
+churn_raw <- churn_raw[, -1] # remove customerID
+churn_raw$TotalCharges <- as.numeric(as.character(churn_raw$TotalCharges))
+churn_raw <- churn_raw[complete.cases(churn_raw), ] # drop 11 NAs
+
+telco_vars <- c("Churn", "tenure", "MonthlyCharges", "TotalCharges",
+ "Contract", "InternetService", "PaymentMethod")
+churn_data <- churn_raw[, telco_vars]
+
+# Encode outcome and categoricals as factors
+churn_data$Churn <- factor(churn_data$Churn, levels = c("No", "Yes"))
+churn_data$Contract <- as.factor(churn_data$Contract)
+churn_data$InternetService <- as.factor(churn_data$InternetService)
+churn_data$PaymentMethod <- as.factor(churn_data$PaymentMethod)
+
+# Standardize numeric predictors only
+num_preds <- c("tenure", "MonthlyCharges", "TotalCharges")
+pre <- preProcess(churn_data[, num_preds], method = c("centre", "scale"))
+churn_scaled <- predict(pre, churn_data)
+
+# Create a single stratified 80/20 train-test split
+set.seed(42)
+train_idx <- createDataPartition(churn_scaled$Churn, p = 0.8, list = FALSE)
+train_data <- churn_scaled[ train_idx, ]
+test_data <- churn_scaled[-train_idx, ]
+
+round(prop.table(table(train_data$Churn)), 3)
+```
+
+# Part 1: Why Accuracy Fails — Motivating AUC (25 points)
+
+## 1.1 The Accuracy Trap (10 points)
+
+Fit a kNN classifier with **k = 15** on the training set and predict class labels on the test set using the **default 0.5 threshold** (`type = "class"`). Report accuracy, sensitivity (recall for "Yes"/churn), and specificity.
+
+Then, calculate the accuracy a **naïve classifier** would achieve if it simply predicted "No" for every observation.
+
+```{r part1_1_knn_class}
+# 1. Fit knn3 with k = 15 on train_data
+knn_model <- knn3(Churn ~ ., data = train_data, k = 15)
+
+# 2. Predict on test_data using type = "class"
+pred_class <- predict(knn_model, test_data, type = "class")
+
+# 3. Use confusionMatrix() with positive = "Yes"
+cm <- confusionMatrix(pred_class, test_data$Churn, positive = "Yes")
+
+# 4. Extract and report: accuracy, sensitivity, specificity
+accuracy_knn <- cm$overall["Accuracy"]
+sensitivity_knn <- cm$byClass["Sensitivity"]
+specificity_knn <- cm$byClass["Specificity"]
+
+cat("kNN (k=15) Performance:\n")
+cat("Accuracy:", round(accuracy_knn, 4), "\n")
+cat("Sensitivity (Recall):", round(sensitivity_knn, 4), "\n")
+cat("Specificity:", round(specificity_knn, 4), "\n")
+
+# 5. Compute naive classifier accuracy (always predict "No")
+naive_accuracy <- sum(test_data$Churn == "No") / nrow(test_data)
+cat("\nNaive Classifier Accuracy (always predict 'No'):", round(naive_accuracy, 4), "\n")
+```
+
+**Question 1:** Report the kNN accuracy, sensitivity, and specificity. Also report the naïve classifier accuracy. What does this comparison reveal about using accuracy as a performance metric for imbalanced classification problems?
+
+**Answer:** 
+- kNN (k=15) Accuracy: `r round(accuracy_knn, 4)`
+- kNN (k=15) Sensitivity: `r round(sensitivity_knn, 4)`
+- kNN (k=15) Specificity: `r round(specificity_knn, 4)`
+- Naïve Classifier Accuracy: `r round(naive_accuracy, 4)`
+
+The kNN model's accuracy (`r round(accuracy_knn, 4)`) is only marginally better than the naïve classifier (`r round(naive_accuracy, 4)`), despite having meaningful sensitivity (`r round(sensitivity_knn, 4)`). This reveals that **accuracy is misleading for imbalanced classification problems** because a model can achieve high accuracy simply by predicting the majority class ("No" = 73.4% of data) for all observations. The model appears accurate but does not identify the minority class (i.e., the churners), which is often the most important class to detect. Accuracy doesn't tell us whether the model can actually distinguish between classes — it only tells us the overall proportion of correct predictions.
+
+---
+
+## 1.2 ROC Curve and AUC (15 points)
+
+Now use `knn3` with `type = "prob"` to obtain **predicted probabilities** for the "Yes" (churn) class. Use the `ROCR` package to plot the ROC curve and compute the AUC.
+
+```{r part1_2_roc_auc}
+# 1. Fit knn3 with k = 15 on train_data
+knn_model <- knn3(Churn ~ ., data = train_data, k = 15)
+
+# 2. Predict probabilities on test_data using type = "prob"
+pred_prob <- predict(knn_model, test_data, type = "prob")
+
+# 3. Use ROCR
+pred_rocr <- prediction(pred_prob[, "Yes"], test_data$Churn == "Yes")
+perf_roc <- performance(pred_rocr, "tpr", "fpr")
+
+# 4. Compute AUC
+perf_auc <- performance(pred_rocr, "auc")
+auc_value <- slot(perf_auc, "y.values")[[1]]
+
+cat("AUC:", round(auc_value, 4), "\n")
+
+# Plot ROC curve
+plot(perf_roc, main = "ROC Curve for kNN (k=15)", 
+     col = "blue", lwd = 2)
+# Add no-discrimination diagonal
+abline(a = 0, b = 1, lty = 2, col = "gray")
+# Add legend
+legend("bottomright", legend = c("kNN Model", "No Discrimination"),
+       col = c("blue", "gray"), lty = c(1, 2), bty = "n")
+```
+
+**Question 2:** Report the AUC value. Interpret it in plain language — what does an AUC of this magnitude tell you about the model's ability to separate churners from non-churners? How does the ROC curve compare to the no-discrimination diagonal? What would a perfect ROC curve look like?
+
+**Answer:**
+- AUC = `r round(auc_value, 4)`
+
+An AUC of `r round(auc_value, 4)` indicates that there is an `r round(auc_value*100, 1)`% chance that the model will correctly rank a randomly chosen churner higher than a randomly chosen non-churner. This represents **good discriminative ability** — the model can reasonably distinguish between customers who will churn and those who won't. The ROC curve is well above the no-discrimination diagonal (the 45-degree line representing random guessing), confirming that this model performs substantially better than chance. A perfect ROC curve would reach the top-left corner (TPR = 1, FPR = 0), with AUC = 1.0.
+
+---
+
+# Part 2: Tuning k with AUC (40 points)
+
+## 2.1 Bootstrap Tuning Using AUC (20 points)
+
+Tune k using **bootstrap validation** with **AUC** as the performance criterion — not accuracy.
+
+```{r part2_1_bootstrap_tuning, cache=TRUE}
+# Grid: odd values of k from 3 to 51
+k_grid <- seq(3, 51, by = 2)
+n_boot <- 20
+mean_auc <- numeric(length(k_grid))
+
+# Bootstrap tuning loop
+for (i in seq_along(k_grid)) {
+  k <- k_grid[i]
+  boot_aucs <- numeric(n_boot)
+  
+  for (b in 1:n_boot) {
+    # Create bootstrap sample
+    boot_idx <- sample(nrow(train_data), replace = TRUE)
+    boot_train <- train_data[boot_idx, ]
+    
+    # Fit kNN
+    knn_boot <- knn3(Churn ~ ., data = boot_train, k = k)
+    
+    # Predict on out-of-bag samples (original training set)
+    pred_boot <- predict(knn_boot, train_data, type = "prob")
+    
+    # Compute AUC
+    pred_rocr_boot <- prediction(pred_boot[, "Yes"], train_data$Churn == "Yes")
+    perf_auc_boot <- performance(pred_rocr_boot, "auc")
+    boot_aucs[b] <- slot(perf_auc_boot, "y.values")[[1]]
+  }
+  
+  mean_auc[i] <- mean(boot_aucs)
+}
+
+# Find optimal k
+optimal_k <- k_grid[which.max(mean_auc)]
+optimal_auc <- max(mean_auc)
+
+cat("Optimal k:", optimal_k, "\n")
+cat("Bootstrap AUC:", round(optimal_auc, 4), "\n")
+```
+
+Plot mean AUC vs k:
+
+```{r part2_1_plot}
+# Plot mean AUC vs k
+plot(k_grid, mean_auc, type = "b", pch = 19, col = "blue",
+     xlab = "k (number of neighbours)", ylab = "Mean AUC",
+     main = "Mean Bootstrap AUC vs. k")
+# Add vertical dashed line at optimal k
+abline(v = optimal_k, lty = 2, col = "red")
+# Annotate
+text(optimal_k, optimal_auc, 
+     paste("Optimal k =", optimal_k, "\nAUC =", round(optimal_auc, 3)),
+     pos = 4, col = "red")
+```
+
+**Question 3:** Plot mean AUC vs k. Add a vertical dashed line at the optimal k and annotate it. What is the optimal k? What is the corresponding bootstrap AUC? Describe the shape of the AUC-vs-k curve — what does it tell us about the bias-variance trade-off?
+
+**Answer:**
+- Optimal k: `r optimal_k`
+- Corresponding Bootstrap AUC: `r round(optimal_auc, 4)`
+
+The AUC-vs-k curve shows that performance is relatively stable across a range of k values, with a slight peak around k = `r optimal_k`. As k increases beyond the optimal point, AUC tends to decrease slightly, indicating that too many neighbours introduce bias (underfitting). Conversely, very small k values can lead to high variance (overfitting). The curve demonstrates the classic bias-variance trade-off: small k gives low bias but high variance, while large k gives higher bias but lower variance. The optimal k balances these competing concerns.
+
+---
+
+## 2.2 Test Set Evaluation (10 points)
+
+Fit the final model using the **optimal k** on the **full training set** and evaluate it on the held-out test set.
+
+```{r part2_2_test_evaluation}
+# 1. Fit knn3 on train_data with k = optimal_k
+final_model <- knn3(Churn ~ ., data = train_data, k = optimal_k)
+
+# 2. Predict probabilities on test_data
+pred_prob_test <- predict(final_model, test_data, type = "prob")
+
+# 3. Compute test AUC using ROCR
+pred_rocr_test <- prediction(pred_prob_test[, "Yes"], test_data$Churn == "Yes")
+perf_auc_test <- performance(pred_rocr_test, "auc")
+test_auc <- slot(perf_auc_test, "y.values")[[1]]
+
+# 4. Report test AUC
+cat("Test AUC:", round(test_auc, 4), "\n")
+cat("Bootstrap AUC (from tuning):", round(optimal_auc, 4), "\n")
+cat("Gap (Bootstrap - Test):", round(optimal_auc - test_auc, 4), "\n")
+```
+
+**Question 4:** Report the test AUC. Compare it to the bootstrap AUC from tuning. Is there a notable gap? What would a large gap suggest?
+
+**Answer:**
+- Test AUC: `r round(test_auc, 4)`
+- Bootstrap AUC: `r round(optimal_auc, 4)`
+- Gap: `r round(optimal_auc - test_auc, 4)`
+
+The test AUC (`r round(test_auc, 4)`) is very close to the bootstrap AUC (`r round(optimal_auc, 4)`), with only a small gap of `r round(optimal_auc - test_auc, 4)`. This indicates good generalization — the model performs similarly on unseen data as it did during tuning. A large gap would suggest overfitting (the model fits the training/bootstrap data too closely and doesn't generalize well) or distribution shift between training and test data.
+
+---
+
+## 2.3 Conceptual: AUC vs Accuracy as a Tuning Criterion (10 points)
+
+**Question 5:** Why is AUC a better tuning criterion than accuracy for this dataset? What information does AUC capture that accuracy misses? In what situations might accuracy still be an appropriate criterion?
+
+**Answer:**
+
+**Why AUC is better for this dataset:**
+1. **Class imbalance handling**: With ~73% non-churners and ~27% churners, accuracy can be maximized by simply predicting the majority class. AUC evaluates the model's ability to rank positive cases (churners) higher than negative cases across all possible thresholds, not just one fixed threshold.
+2. **Threshold independence**: AUC considers all possible classification thresholds, providing a holistic measure of model discriminative ability. Accuracy depends heavily on the chosen threshold (usually 0.5).
+3. **Captures ranking quality**: AUC tells us how well the model separates the two classes — the probability that a randomly chosen churner has a higher predicted probability than a randomly chosen non-churner.
+
+**What AUC captures that accuracy misses:**
+- The model's ability to distinguish between classes at various thresholds
+- The relative ordering of predictions (probability rankings)
+- Performance on the minority class (churners), which is often the most important
+
+**When accuracy might still be appropriate:**
+- When classes are roughly balanced (50/50 or close)
+- When all misclassification costs are equal
+- When the business problem requires a simple, interpretable metric
+- When the cost of false positives equals the cost of false negatives
+
+---
+
+# Part 3: Optimal Threshold (35 points)
+
+## 3.1 Youden's J Statistic (15 points)
+
+Use Youden's J statistic to find the optimal threshold.
+
+```{r part3_1_youdens_j}
+# 1. Use the final model (optimal k) fitted on train_data
+# (already done: final_model)
+
+# 2. Get predicted probabilities on test_data
+# (already done: pred_prob_test)
+
+# 3. Use ROCR for sensitivity and specificity at each threshold
+pred_rocr <- prediction(pred_prob_test[, "Yes"], test_data$Churn == "Yes")
+perf_ss <- performance(pred_rocr, "sens", "spec")
+sensitivity <- perf_ss@y.values[[1]]
+specificity <- perf_ss@x.values[[1]]
+thresholds <- perf_ss@alpha.values[[1]]
+
+# 4. Compute Youden's J = sensitivity + specificity - 1
+j_stat <- sensitivity + specificity - 1
+
+# 5. Find the threshold with the maximum J
+optimal_idx <- which.max(j_stat)
+optimal_threshold <- thresholds[optimal_idx]
+optimal_tpr <- sensitivity[optimal_idx]  # TPR = Sensitivity
+optimal_fpr <- 1 - specificity[optimal_idx]  # FPR = 1 - Specificity
+optimal_j <- j_stat[optimal_idx]
+
+# 6. Report results
+cat("Optimal Threshold (Youden's J):", round(optimal_threshold, 4), "\n")
+cat("TPR (Sensitivity):", round(optimal_tpr, 4), "\n")
+cat("FPR:", round(optimal_fpr, 4), "\n")
+cat("J Value:", round(optimal_j, 4), "\n")
+```
+
+Plot ROC curve with optimal operating point marked:
+
+```{r part3_1_plot_roc}
+# Get ROC curve data
+perf_roc <- performance(pred_rocr, "tpr", "fpr")
+
+# Plot ROC curve
+plot(perf_roc, main = paste("ROC Curve with Optimal Threshold (k =", optimal_k, ")"),
+     col = "blue", lwd = 2)
+# Add no-discrimination diagonal
+abline(a = 0, b = 1, lty = 2, col = "gray")
+
+# Mark optimal point
+points(optimal_fpr, optimal_tpr, col = "red", pch = 19, cex = 1.5)
+# Annotate
+text(optimal_fpr + 0.1, optimal_tpr - 0.1,
+     paste("Threshold =", round(optimal_threshold, 3),
+           "\nTPR =", round(optimal_tpr, 3),
+           "\nFPR =", round(optimal_fpr, 3)),
+     col = "red", pos = 4)
+
+legend("bottomright", legend = c("kNN Model", "No Discrimination", "Optimal Point"),
+       col = c("blue", "gray", "red"), lty = c(1, 2, NA), pch = c(NA, NA, 19), bty = "n")
+```
+
+**Question 6:** Report the optimal threshold (Youden's J), TPR, FPR, and J value. Then plot the ROC curve and mark the optimal operating point (red dot, annotated with threshold, TPR, FPR). Briefly describe what this point represents geometrically on the ROC curve.
+
+**Answer:**
+- Optimal Threshold: `r round(optimal_threshold, 4)`
+- TPR (Sensitivity): `r round(optimal_tpr, 4)`
+- FPR: `r round(optimal_fpr, 4)`
+- J Value: `r round(optimal_j, 4)`
+
+**Geometric interpretation:** The optimal operating point (Youden's J) is the point on the ROC curve that is farthest from the no-discrimination diagonal (the random guessing line). Geometrically, it represents the point where the vertical distance between the ROC curve and the diagonal is maximized. This point balances sensitivity and specificity, maximizing the correct classification rate across both classes simultaneously.
+
+---
+
+## 3.2 Default vs. Optimal Threshold Comparison (10 points)
+
+Compare model performance at the **default 0.5 threshold** vs the **Youden-optimal threshold**.
+
+```{r part3_2_threshold_comparison}
+# For each threshold (0.5 and optimal)
+thresholds_to_compare <- c(0.5, optimal_threshold)
+threshold_names <- c("Default (0.5)", "Optimal (Youden's J)")
+
+results <- data.frame(
+  Threshold = threshold_names,
+  Accuracy = NA,
+  Sensitivity = NA,
+  Specificity = NA,
+  F1 = NA
+)
+
+for (i in 1:length(thresholds_to_compare)) {
+  thresh <- thresholds_to_compare[i]
+  predicted <- ifelse(pred_prob_test[, "Yes"] > thresh, "Yes", "No")
+  predicted <- factor(predicted, levels = c("No", "Yes"))
+  
+  cm <- confusionMatrix(predicted, test_data$Churn, positive = "Yes")
+  
+  results$Accuracy[i] <- round(cm$overall["Accuracy"], 4)
+  results$Sensitivity[i] <- round(cm$byClass["Sensitivity"], 4)
+  results$Specificity[i] <- round(cm$byClass["Specificity"], 4)
+  results$F1[i] <- round(cm$byClass["F1"], 4)
+}
+
+# Display comparison table
+kable(results, caption = "Comparison: Default vs. Optimal Threshold") %>%
+  kable_styling(full_width = FALSE)
+
+# Also compute False Negatives and False Positives
+for (i in 1:length(thresholds_to_compare)) {
+  thresh <- thresholds_to_compare[i]
+  predicted <- ifelse(pred_prob_test[, "Yes"] > thresh, "Yes", "No")
+  
+  fn <- sum(predicted == "No" & test_data$Churn == "Yes")
+  fp <- sum(predicted == "Yes" & test_data$Churn == "No")
+  
+  cat("\nThreshold:", thresh, "\n")
+  cat("False Negatives (missed churners):", fn, "\n")
+  cat("False Positives (unnecessary contacts):", fp, "\n")
+}
+```
+
+**Question 7:** Present the comparison table. Which threshold gives higher sensitivity? Which gives higher accuracy? Are the differences meaningful? Explain what is being traded off when you lower the threshold from 0.5 to the optimal value.
+
+**Answer:**
+- **Higher sensitivity:** The optimal threshold (`r round(optimal_threshold, 4)`) gives higher sensitivity (`r results$Sensitivity[2]`) compared to the default threshold (`r results$Sensitivity[1]`).
+- **Higher accuracy:** The default threshold (`r results$Accuracy[1]`) gives slightly higher accuracy compared to the optimal threshold (`r results$Accuracy[2]`).
+
+The differences are meaningful from a business perspective. When lowering the threshold from 0.5 to the optimal value, we **trade some overall accuracy for substantially higher sensitivity**. This means the model identifies more actual churners (lower false negatives), which is crucial for a customer retention strategy. The optimal threshold correctly classifies more customers who would have churned, even though it slightly increases false positives (non-churners contacted unnecessarily). In imbalanced classification problems where the cost of missing a positive case (churner) is high, this trade-off is often worthwhile.
+
+---
+
+## 3.3 Business Recommendation (15 points)
+
+Based on my results, I will then recommend a threshold for the telecom company's customer retention strategy:
+
+```{r part3_3_business}
+# Extract results for the table
+res_default <- confusionMatrix(
+  factor(ifelse(pred_prob_test[, "Yes"] > 0.5, "Yes", "No"), levels = c("No", "Yes")),
+  test_data$Churn, positive = "Yes"
+)
+
+res_optimal <- confusionMatrix(
+  factor(ifelse(pred_prob_test[, "Yes"] > optimal_threshold, "Yes", "No"), levels = c("No", "Yes")),
+  test_data$Churn, positive = "Yes"
+)
+
+# Build summary table
+business_summary <- data.frame(
+  Metric = c("Threshold", "True Positives (correctly identified churners)",
+             "False Negatives (missed churners)", "False Positives (unnecessary contacts)",
+             "True Negatives (correctly identified non-churners)",
+             "Sensitivity", "Specificity", "Accuracy"),
+  `Default (0.5)` = c(
+    0.5,
+    res_default$table["Yes", "Yes"],
+    res_default$table["No", "Yes"],
+    res_default$table["Yes", "No"],
+    res_default$table["No", "No"],
+    round(res_default$byClass["Sensitivity"], 4),
+    round(res_default$byClass["Specificity"], 4),
+    round(res_default$overall["Accuracy"], 4)
+  ),
+  `Optimal (Youden)` = c(
+    round(optimal_threshold, 4),
+    res_optimal$table["Yes", "Yes"],
+    res_optimal$table["No", "Yes"],
+    res_optimal$table["Yes", "No"],
+    res_optimal$table["No", "No"],
+    round(res_optimal$byClass["Sensitivity"], 4),
+    round(res_optimal$byClass["Specificity"], 4),
+    round(res_optimal$overall["Accuracy"], 4)
+  )
+)
+
+kable(business_summary, caption = "Business Impact Comparison") %>%
+  kable_styling(full_width = FALSE)
+
+# Calculate difference in false negatives
+fn_default <- res_default$table["No", "Yes"]
+fn_optimal <- res_optimal$table["No", "Yes"]
+fn_reduction <- fn_default - fn_optimal
+
+cat("\nFalse Negative Reduction:", fn_reduction, "fewer missed churners\n")
+```
+
+**Question 8:** Scenario: If I were advising the telecom company on their customer retention strategy, and their plan was to contact customers predicted as likely churners with a retention offer (a discount or upgrade), based on my results, here are the threshold I'd recommend:
+
+**Recommendation: Use the Youden-optimal threshold (`r round(optimal_threshold, 4)`)**
+
+**Quantified Impact:**
+- Default threshold (0.5): `r fn_default` false negatives (missed churners)
+- Optimal threshold (`r round(optimal_threshold, 4)`): `r fn_optimal` false negatives (missed churners)
+- **Reduction:** `r fn_reduction` fewer missed churners
+
+**Business Cost Analysis:**
+
+| Error Type | Description | Business Impact |
+|------------|-------------|-----------------|
+| **False Negative** (missed churner) | Customer leaves without receiving retention offer | Lost customer lifetime value, acquisition cost to replace, negative word-of-mouth |
+| **False Positive** (unnecessary contact) | Loyal customer receives unnecessary offer | Minor: cost of contact + potential annoyance, but low if offer is generic |
+
+**Recommendation Rationale:**
+
+The optimal threshold reduces missed churners by `r fn_reduction` customers (from `r fn_default` to `r fn_optimal`). Given that:
+1. Acquiring a new customer is 5-25x more expensive than retaining an existing one
+2. The cost of false positives is minimal (just a marketing contact)
+3. The improvement in sensitivity (catching more churners) far outweighs the small accuracy loss
+
+I recommend the **Youden-optimal threshold** because this minimizes the number of customers who churn without being offered a retention intervention, which has the highest business cost.
+
+**Good luck!**
