@@ -52,7 +52,7 @@ This project demonstrates the ability to move beyond surface-level price charts 
 
 Music, media, technology, and creator-led businesses increasingly rely on financial analytics to evaluate opportunities, forecast outcomes, understand risk, and make capital-allocation decisions. These projects show how market data can be transformed into clear financial insight using statistical modelling, forecasting, and visual analytics.
 
-For Ryan Leslie, SuperPhone, WealthPlan, and related ventures, this type of analysis supports:
+For Spectacular Stars, Spectacular Academy, and Adwizar, related ventures, this type of analysis supports:
 
 - Investment evaluation  
 - Wealth-planning analytics  
