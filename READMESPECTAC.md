@@ -1,9 +1,9 @@
-# TURING
-## Machine Learning, Financial Analytics, and Optimization Projects for TURING
+# Adwizar & Spectacular Academy
+## Machine Learning, Financial Analytics, and Optimization Projects for Adwizar & Spectacular Academy
 
 This portfolio presents a focused collection of analytics projects designed to demonstrate how machine learning, financial modelling, optimization, and interactive decision systems can support creator-economy strategy, audience monetization, investment thinking, and data-driven business growth.
 
-The portfolio is built around the type of work that would be useful for TURING , Disruptive Multimedia, and related advertisement/branding/media, technology, and wealth-building ventures.
+The portfolio is built around the type of work that would be useful for Adwizar & Spectacular Academy, Disruptive Multimedia, and related advertisement/branding/media, technology, and wealth-building ventures.
 
 ---
 
@@ -72,7 +72,7 @@ These projects connect analytics with wealth planning, investment evaluation, an
 
 ## Video Demo
 
-A video demo is included to explain the portfolio, walk through the featured project, and show how the work connects to  TURING’s business, technology, and creator-economy ecosystem.
+A video demo is included to explain the portfolio, walk through the featured project, and show how the work connects to  Adwizar & Spectacular Academy's business, technology, and creator-economy ecosystem.
 
 **Video Demo:** [Watch the AI-Powered Market/WealthPlan portfolio demo](https://share.descript.com/view/0AG5nn8beHY)
 
